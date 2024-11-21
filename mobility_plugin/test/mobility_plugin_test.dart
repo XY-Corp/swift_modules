@@ -10,6 +10,16 @@ class MockMobilityPluginPlatform
 
   @override
   Future<String?> getPlatformVersion() => Future.value('42');
+
+  @override
+  Future<List<dynamic>> getMobilityData() => Future.value([
+        {
+          'value': 1.5,
+          'startDate': 1633036800,
+          'endDate': 1633036860,
+        },
+        // Add more mock data if needed
+      ]);
 }
 
 void main() {
@@ -25,5 +35,15 @@ void main() {
     MobilityPluginPlatform.instance = fakePlatform;
 
     expect(await mobilityPlugin.getPlatformVersion(), '42');
+  });
+
+  test('getMobilityData', () async {
+    MobilityPlugin mobilityPlugin = MobilityPlugin();
+    MockMobilityPluginPlatform fakePlatform = MockMobilityPluginPlatform();
+    MobilityPluginPlatform.instance = fakePlatform;
+
+    final data = await mobilityPlugin.getMobilityData();
+    expect(data, isNotEmpty);
+    expect(data.first['value'], 1.5);
   });
 }

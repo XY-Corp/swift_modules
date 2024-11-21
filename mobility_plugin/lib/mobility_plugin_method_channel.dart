@@ -14,4 +14,14 @@ class MethodChannelMobilityPlugin extends MobilityPluginPlatform {
     final version = await methodChannel.invokeMethod<String>('getPlatformVersion');
     return version;
   }
+
+  @override
+  Future<List<dynamic>> getMobilityData() async {
+    try {
+      final data = await methodChannel.invokeMethod<List<dynamic>>('getMobilityData');
+      return data ?? [];
+    } on PlatformException catch (e) {
+      throw 'Failed to get mobility data: ${e.message}';
+    }
+  }
 }
