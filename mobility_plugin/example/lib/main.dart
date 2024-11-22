@@ -111,8 +111,6 @@ class _MyAppState extends State<MyApp> {
     switch (key) {
       case 'walkingSpeed':
         return 'Walking Speed';
-      case 'stepCount':
-        return 'Step Count';
       case 'doubleSupportPercentage':
         return 'Double Support Percentage';
       case 'stepLength':

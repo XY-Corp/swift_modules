@@ -33,7 +33,6 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
     private func requestAuthorization(completion: @escaping (Bool) -> Void) {
         var mobilityTypes: Set<HKSampleType> = [
             HKObjectType.quantityType(forIdentifier: .walkingSpeed)!,
-            HKObjectType.quantityType(forIdentifier: .stepCount)!,
         ]
         
         if #available(iOS 13.0, *) {
@@ -55,7 +54,6 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
         if #available(iOS 13.0, *) {
             var dataTypes: [String: HKQuantityTypeIdentifier] = [
                 "walkingSpeed": .walkingSpeed,
-                "stepCount": .stepCount,
                 "doubleSupportPercentage": .walkingDoubleSupportPercentage,
                 "stepLength": .walkingStepLength,
                 "asymmetryPercentage": .walkingAsymmetryPercentage
@@ -94,17 +92,24 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
                 var data = [[String: Any]]()
                 
                 let unit: HKUnit
-                switch identifier {
-                case .walkingSpeed:
-                    unit = HKUnit.meter().unitDivided(by: HKUnit.second())
-                case .walkingDoubleSupportPercentage, .walkingAsymmetryPercentage:
-                    unit = HKUnit.percent()
-                case .walkingStepLength:
-                    unit = HKUnit.meter()
-                case .appleWalkingSteadiness:
+
+                // Properly guard the use of .appleWalkingSteadiness
+                if #available(iOS 15.0, *), identifier == .appleWalkingSteadiness {
                     unit = HKUnit.count()
-                default:
-                    unit = HKUnit.count()
+                } else {
+                    switch identifier {
+                    case .walkingSpeed:
+                        unit = HKUnit.meter().unitDivided(by: HKUnit.second())
+                    case .walkingDoubleSupportPercentage, .walkingAsymmetryPercentage:
+                        unit = HKUnit.percent()
+                    case .walkingStepLength:
+                        unit = HKUnit.meter()
+                    case .stepCount:
+                        unit = HKUnit.count()
+                    default:
+                        dispatchGroup.leave()
+                        return
+                    }
                 }
 
                 samples?.forEach { sample in
