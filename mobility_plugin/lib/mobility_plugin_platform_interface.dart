@@ -27,7 +27,7 @@ abstract class MobilityPluginPlatform extends PlatformInterface {
     throw UnimplementedError('getPlatformVersion() has not been implemented.');
   }
 
-  Future<List<dynamic>> getMobilityData() {
+  Future<Map<String, dynamic>> getMobilityData() {
     throw UnimplementedError('getMobilityData() has not been implemented.');
   }
 

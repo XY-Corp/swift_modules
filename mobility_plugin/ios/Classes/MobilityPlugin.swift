@@ -20,7 +20,7 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
         case "requestAuthorization":
             requestAuthorization { (success) in
                 if success {
-                    result(nil) // Indicate success without data
+                    result(nil)
                 } else {
                     result(FlutterError(code: "AUTH_ERROR", message: "Authorization failed", details: nil))
                 }
@@ -31,74 +31,109 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
     }
 
     private func requestAuthorization(completion: @escaping (Bool) -> Void) {
-        let mobilityTypes: Set<HKSampleType> = [
+        var mobilityTypes: Set<HKSampleType> = [
             HKObjectType.quantityType(forIdentifier: .walkingSpeed)!,
             HKObjectType.quantityType(forIdentifier: .stepCount)!,
-            // Add other required mobility data types here
         ]
+        
+        if #available(iOS 13.0, *) {
+            mobilityTypes.insert(HKObjectType.quantityType(forIdentifier: .walkingDoubleSupportPercentage)!)
+            mobilityTypes.insert(HKObjectType.quantityType(forIdentifier: .walkingStepLength)!)
+            mobilityTypes.insert(HKObjectType.quantityType(forIdentifier: .walkingAsymmetryPercentage)!)
+        }
+        
+        if #available(iOS 15.0, *) {
+            mobilityTypes.insert(HKObjectType.quantityType(forIdentifier: .appleWalkingSteadiness)!)
+        }
+        
         healthStore.requestAuthorization(toShare: nil, read: mobilityTypes) { (success, error) in
             completion(success)
         }
     }
 
     private func fetchMobilityData(result: @escaping FlutterResult) {
-        if #available(iOS 14.0, *) {
-            let walkingSpeedType = HKQuantityType.quantityType(forIdentifier: .walkingSpeed)!
-            
-            // Check authorization status
-            let authorizationStatus = healthStore.authorizationStatus(for: walkingSpeedType)
-            if authorizationStatus != .sharingAuthorized {
-                // Request authorization
-                requestAuthorization { (success) in
-                    if success {
-                        // After authorization, fetch data
-                        self.queryWalkingSpeedData(result: result)
-                    } else {
-                        result(FlutterError(code: "AUTH_ERROR", message: "Authorization failed", details: nil))
+        if #available(iOS 13.0, *) {
+            var dataTypes: [String: HKQuantityTypeIdentifier] = [
+                "walkingSpeed": .walkingSpeed,
+                "stepCount": .stepCount,
+                "doubleSupportPercentage": .walkingDoubleSupportPercentage,
+                "stepLength": .walkingStepLength,
+                "asymmetryPercentage": .walkingAsymmetryPercentage
+            ]
+
+            if #available(iOS 15.0, *) {
+                dataTypes["walkingSteadiness"] = .appleWalkingSteadiness
+            }
+
+            queryMobilityData(dataTypes: dataTypes, result: result)
+        } else {
+            result(FlutterError(code: "UNAVAILABLE", message: "Mobility data is only available on iOS 13.0 or newer", details: nil))
+        }
+    }
+
+    @available(iOS 13.0, *)
+    private func queryMobilityData(dataTypes: [String: HKQuantityTypeIdentifier], result: @escaping FlutterResult) {
+        let dispatchGroup = DispatchGroup()
+        var allData = [String: [[String: Any]]]()
+        var queryError: Error?
+
+        for (key, identifier) in dataTypes {
+            dispatchGroup.enter()
+            guard let quantityType = HKQuantityType.quantityType(forIdentifier: identifier) else {
+                dispatchGroup.leave()
+                continue
+            }
+
+            let query = HKSampleQuery(sampleType: quantityType, predicate: nil, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { (query, samples, error) in
+                if let error = error {
+                    queryError = error
+                    dispatchGroup.leave()
+                    return
+                }
+
+                var data = [[String: Any]]()
+                
+                let unit: HKUnit
+                switch identifier {
+                case .walkingSpeed:
+                    unit = HKUnit.meter().unitDivided(by: HKUnit.second())
+                case .walkingDoubleSupportPercentage, .walkingAsymmetryPercentage:
+                    unit = HKUnit.percent()
+                case .walkingStepLength:
+                    unit = HKUnit.meter()
+                case .appleWalkingSteadiness:
+                    unit = HKUnit.count()
+                default:
+                    unit = HKUnit.count()
+                }
+
+                samples?.forEach { sample in
+                    if let quantitySample = sample as? HKQuantitySample {
+                        let value = quantitySample.quantity.doubleValue(for: unit)
+                        let startDate = quantitySample.startDate.timeIntervalSince1970
+                        let endDate = quantitySample.endDate.timeIntervalSince1970
+                        data.append([
+                            "value": value,
+                            "startDate": startDate,
+                            "endDate": endDate
+                        ])
                     }
                 }
-            } else {
-                // Authorization already granted, fetch data
-                queryWalkingSpeedData(result: result)
+                allData[key] = data
+                dispatchGroup.leave()
             }
-        } else {
-            result(FlutterError(code: "UNAVAILABLE", message: "Walking speed is only available on iOS 14.0 or newer", details: nil))
+            healthStore.execute(query)
         }
-    }
 
-    // Extracted method to query walking speed data
-    @available(iOS 14.0, *)
-    private func queryWalkingSpeedData(result: @escaping FlutterResult) {
-        let walkingSpeedType = HKQuantityType.quantityType(forIdentifier: .walkingSpeed)!
-        let query = HKSampleQuery(sampleType: walkingSpeedType, predicate: nil, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { (query, samples, error) in
-            if let error = error {
+        dispatchGroup.notify(queue: .main) {
+            if let error = queryError {
                 result(FlutterError(code: "FETCH_ERROR", message: error.localizedDescription, details: nil))
-                return
+            } else {
+                result(allData)
             }
-
-            var data = [[String: Any]]()
-
-            // Define the speed unit
-            let speedUnit = HKUnit.meter().unitDivided(by: HKUnit.second())
-
-            samples?.forEach { sample in
-                if let quantitySample = sample as? HKQuantitySample {
-                    let value = quantitySample.quantity.doubleValue(for: speedUnit)
-                    let startDate = quantitySample.startDate.timeIntervalSince1970
-                    let endDate = quantitySample.endDate.timeIntervalSince1970
-                    data.append([
-                        "value": value,
-                        "startDate": startDate,
-                        "endDate": endDate
-                    ])
-                }
-            }
-            result(data)
         }
-        healthStore.execute(query)
     }
 
-    // New method
     private func getPlatformVersion(result: @escaping FlutterResult) {
         let systemVersion = UIDevice.current.systemVersion
         result("iOS " + systemVersion)

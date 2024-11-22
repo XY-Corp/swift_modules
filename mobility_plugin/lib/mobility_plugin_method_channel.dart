@@ -16,22 +16,29 @@ class MethodChannelMobilityPlugin extends MobilityPluginPlatform {
   }
 
   @override
-  Future<List<dynamic>> getMobilityData() async {
+  Future<Map<String, dynamic>> getMobilityData() async {
     try {
-      final data = await methodChannel.invokeMethod<List<dynamic>>('getMobilityData');
-      return data ?? [];
+      final data = await methodChannel.invokeMethod<Map<dynamic, dynamic>>('getMobilityData');
+      return data != null ? Map<String, dynamic>.from(data) : {};
     } on PlatformException catch (e) {
-      throw 'Failed to get mobility data: ${e.message}';
+      throw PlatformException(
+        code: 'ERROR_GETTING_MOBILITY_DATA',
+        message: 'Failed to get mobility data: ${e.message}',
+        details: e.details,
+      );
     }
   }
 
-  // Implement the requestAuthorization method
   @override
   Future<void> requestAuthorization() async {
     try {
       await methodChannel.invokeMethod('requestAuthorization');
     } on PlatformException catch (e) {
-      throw 'Failed to request authorization: ${e.message}';
+      throw PlatformException(
+        code: 'ERROR_REQUESTING_AUTHORIZATION',
+        message: 'Failed to request authorization: ${e.message}',
+        details: e.details,
+      );
     }
   }
 }

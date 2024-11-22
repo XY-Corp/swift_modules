@@ -17,7 +17,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   final MobilityPlugin _mobilityPlugin = MobilityPlugin();
   String _platformVersion = 'Unknown';
-  List<Map<String, dynamic>> _mobilityData = [];
+  Map<String, List<Map<String, dynamic>>> _mobilityData = {};
   String? _errorMessage;
 
   @override
@@ -60,11 +60,13 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> fetchMobilityData() async {
     try {
-      List<dynamic> data = await _mobilityPlugin.getMobilityData();
+      Map<String, dynamic> data = await _mobilityPlugin.getMobilityData();
       if (!mounted) return;
 
       setState(() {
-        _mobilityData = data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _mobilityData = data.map((key, value) {
+          return MapEntry(key, List<Map<String, dynamic>>.from(value));
+        });
         _errorMessage = null;
       });
     } catch (e) {
@@ -79,6 +81,49 @@ class _MyAppState extends State<MyApp> {
 
   double _convertToMph(double metersPerSecond) {
     return metersPerSecond * 2.23694;
+  }
+
+  String _dataPointToString(String key, Map<String, dynamic> dataPoint) {
+    double value = dataPoint['value'];
+    String unit = '';
+    switch (key) {
+      case 'walkingSpeed':
+        value = _convertToMph(value);
+        unit = 'mph';
+        break;
+      case 'stepLength':
+        unit = 'm';
+        break;
+      case 'doubleSupportPercentage':
+      case 'asymmetryPercentage':
+        unit = '%';
+        break;
+      case 'walkingSteadiness':
+        unit = ''; 
+        break;
+      default:
+        unit = '';
+    }
+    return '${value.toStringAsFixed(2)} $unit';
+  }
+
+  String _getDisplayName(String key) {
+    switch (key) {
+      case 'walkingSpeed':
+        return 'Walking Speed';
+      case 'stepCount':
+        return 'Step Count';
+      case 'doubleSupportPercentage':
+        return 'Double Support Percentage';
+      case 'stepLength':
+        return 'Step Length';
+      case 'asymmetryPercentage':
+        return 'Walking Asymmetry';
+      case 'walkingSteadiness':
+        return 'Walking Steadiness';
+      default:
+        return key;
+    }
   }
 
   @override
@@ -106,19 +151,23 @@ class _MyAppState extends State<MyApp> {
                 const SizedBox(height: 20),
                 Expanded(
                   child: _mobilityData.isNotEmpty
-                      ? ListView.builder(
-                          itemCount: _mobilityData.length,
-                          itemBuilder: (context, index) {
-                            final data = _mobilityData[index];
-                            double speedMph = _convertToMph(data['value']);
-                            return ListTile(
-                              title: Text('Speed: ${speedMph.toStringAsFixed(2)} mph'),
-                              subtitle: Text(
-                                'Start: ${DateTime.fromMillisecondsSinceEpoch((data['startDate'] * 1000).toInt())}\n'
-                                'End: ${DateTime.fromMillisecondsSinceEpoch((data['endDate'] * 1000).toInt())}',
-                              ),
+                      ? ListView(
+                          children: _mobilityData.entries.map((entry) {
+                            String key = entry.key;
+                            List<Map<String, dynamic>> dataPoints = entry.value;
+                            return ExpansionTile(
+                              title: Text(_getDisplayName(key)),
+                              children: dataPoints.map((dataPoint) {
+                                return ListTile(
+                                  title: Text(_dataPointToString(key, dataPoint)),
+                                  subtitle: Text(
+                                    'Start: ${DateTime.fromMillisecondsSinceEpoch((dataPoint['startDate'] * 1000).toInt())}\n'
+                                    'End: ${DateTime.fromMillisecondsSinceEpoch((dataPoint['endDate'] * 1000).toInt())}',
+                                  ),
+                                );
+                              }).toList(),
                             );
-                          },
+                          }).toList(),
                         )
                       : _errorMessage != null
                           ? Text(_errorMessage!)

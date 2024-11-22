@@ -12,14 +12,17 @@ class MockMobilityPluginPlatform
   Future<String?> getPlatformVersion() => Future.value('42');
 
   @override
-  Future<List<dynamic>> getMobilityData() => Future.value([
-        {
-          'value': 1.5,
-          'startDate': 1633036800,
-          'endDate': 1633036860,
-        },
-        // Add more mock data if needed
-      ]);
+  Future<Map<String, dynamic>> getMobilityData() => Future.value({
+        'walkingSpeed': [
+          {
+            'value': 1.5,
+            'startDate': 1633036800,
+            'endDate': 1633036860,
+          },
+          // Add more mock data if needed
+        ],
+        // Add other mobility data if needed
+      });
 
   @override
   Future<void> requestAuthorization() => Future.value();
@@ -47,6 +50,8 @@ void main() {
 
     final data = await mobilityPlugin.getMobilityData();
     expect(data, isNotEmpty);
-    expect(data.first['value'], 1.5);
+    expect(data['walkingSpeed'], isNotNull);
+    expect(data['walkingSpeed'], isA<List<dynamic>>());
+    expect(data['walkingSpeed'][0]['value'], 1.5);
   });
 }

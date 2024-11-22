@@ -6,7 +6,7 @@ class MobilityPlugin {
     return MobilityPluginPlatform.instance.getPlatformVersion();
   }
 
-  Future<List<dynamic>> getMobilityData() {
+  Future<Map<String, dynamic>> getMobilityData() {
     return MobilityPluginPlatform.instance.getMobilityData();
   }
 
