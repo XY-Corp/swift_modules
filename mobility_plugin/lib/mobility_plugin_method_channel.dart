@@ -24,4 +24,14 @@ class MethodChannelMobilityPlugin extends MobilityPluginPlatform {
       throw 'Failed to get mobility data: ${e.message}';
     }
   }
+
+  // Implement the requestAuthorization method
+  @override
+  Future<void> requestAuthorization() async {
+    try {
+      await methodChannel.invokeMethod('requestAuthorization');
+    } on PlatformException catch (e) {
+      throw 'Failed to request authorization: ${e.message}';
+    }
+  }
 }

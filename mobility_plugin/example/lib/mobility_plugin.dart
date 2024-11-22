@@ -13,6 +13,15 @@ class MobilityPlugin {
     }
   }
 
+  // New method to request authorization
+  Future<void> requestAuthorization() async {
+    try {
+      await _channel.invokeMethod('requestAuthorization');
+    } on PlatformException catch (e) {
+      throw 'Failed to request authorization: ${e.message}';
+    }
+  }
+
   Future<List<dynamic>> getMobilityData() async {
     try {
       final List<dynamic> data = await _channel.invokeMethod('getMobilityData');

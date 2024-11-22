@@ -30,4 +30,8 @@ abstract class MobilityPluginPlatform extends PlatformInterface {
   Future<List<dynamic>> getMobilityData() {
     throw UnimplementedError('getMobilityData() has not been implemented.');
   }
+
+  Future<void> requestAuthorization() {
+    throw UnimplementedError('requestAuthorization() has not been implemented.');
+  }
 }

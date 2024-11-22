@@ -9,4 +9,8 @@ class MobilityPlugin {
   Future<List<dynamic>> getMobilityData() {
     return MobilityPluginPlatform.instance.getMobilityData();
   }
+
+  Future<void> requestAuthorization() {
+    return MobilityPluginPlatform.instance.requestAuthorization();
+  }
 }

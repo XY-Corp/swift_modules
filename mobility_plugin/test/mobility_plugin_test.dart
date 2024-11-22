@@ -20,6 +20,9 @@ class MockMobilityPluginPlatform
         },
         // Add more mock data if needed
       ]);
+
+  @override
+  Future<void> requestAuthorization() => Future.value();
 }
 
 void main() {
