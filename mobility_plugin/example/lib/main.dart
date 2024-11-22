@@ -60,12 +60,17 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> fetchMobilityData() async {
     try {
-      Map<String, dynamic> data = await _mobilityPlugin.getMobilityData();
+      Map<String, dynamic> rawData = await _mobilityPlugin.getMobilityData();
       if (!mounted) return;
 
       setState(() {
-        _mobilityData = data.map((key, value) {
-          return MapEntry(key, List<Map<String, dynamic>>.from(value));
+        _mobilityData = rawData.map((key, value) {
+          return MapEntry(
+            key,
+            (value as List)
+                .map((item) => Map<String, dynamic>.from(item as Map))
+                .toList(),
+          );
         });
         _errorMessage = null;
       });

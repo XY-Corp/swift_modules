@@ -22,16 +22,13 @@ class MobilityPlugin {
     }
   }
 
-  Future<Map<String, List<Map<String, dynamic>>>> getMobilityData() async {
+  Future<Map<String, dynamic>> getMobilityData() async {
     try {
       final Map<dynamic, dynamic>? result = await _channel.invokeMethod('getMobilityData');
       if (result == null) {
         return {};
       } else {
-        return result.map((key, value) => MapEntry(
-          key as String,
-          List<Map<String, dynamic>>.from(value.map((item) => Map<String, dynamic>.from(item)))
-        ));
+        return Map<String, dynamic>.from(result);
       }
     } on PlatformException catch (e) {
       throw 'Failed to get mobility data: ${e.message}';
