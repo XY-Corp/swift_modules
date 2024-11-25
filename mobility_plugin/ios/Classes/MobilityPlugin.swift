@@ -107,17 +107,17 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
         var allData = [String: [[String: Any]]]()
         var queryError: Error?
 
-        let predicate: NSPredicate? = {
-            if let startDate = startDate, let endDate = endDate {
-                return HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictStartDate)
-            } else if let startDate = startDate {
-                return HKQuery.predicateForSamples(withStart: startDate, end: nil, options: .strictStartDate)
-            } else if let endDate = endDate {
-                return HKQuery.predicateForSamples(withStart: nil, end: endDate, options: .strictEndDate)
-            } else {
-                return nil
-            }
-        }()
+    let predicate: NSPredicate? = {
+        if let startDate = startDate, let endDate = endDate {
+            return HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [.strictStartDate, .strictEndDate])
+        } else if let startDate = startDate {
+            return HKQuery.predicateForSamples(withStart: startDate, end: nil, options: [.strictStartDate])
+        } else if let endDate = endDate {
+            return HKQuery.predicateForSamples(withStart: nil, end: endDate, options: [.strictEndDate])
+        } else {
+            return nil
+        }
+    }()
 
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
 
