@@ -13,12 +13,16 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
+        case "getAllMobilityData":
+            handleGetAllMobilityData(result: result)
         case "getMobilityData":
-            fetchMobilityData(result: result)
+            handleGetMobilityData(call: call, result: result)
+        case "getRecentMobilityData":
+            handleGetRecentMobilityData(call: call, result: result)
         case "getPlatformVersion":
-            self.getPlatformVersion(result: result)
+            getPlatformVersion(result: result)
         case "requestAuthorization":
-            requestAuthorization { (success) in
+            requestAuthorization { success in
                 if success {
                     result(nil)
                 } else {
@@ -34,23 +38,51 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
         var mobilityTypes: Set<HKSampleType> = [
             HKObjectType.quantityType(forIdentifier: .walkingSpeed)!,
         ]
-        
+
         if #available(iOS 13.0, *) {
             mobilityTypes.insert(HKObjectType.quantityType(forIdentifier: .walkingDoubleSupportPercentage)!)
             mobilityTypes.insert(HKObjectType.quantityType(forIdentifier: .walkingStepLength)!)
             mobilityTypes.insert(HKObjectType.quantityType(forIdentifier: .walkingAsymmetryPercentage)!)
         }
-        
+
         if #available(iOS 15.0, *) {
             mobilityTypes.insert(HKObjectType.quantityType(forIdentifier: .appleWalkingSteadiness)!)
         }
-        
-        healthStore.requestAuthorization(toShare: nil, read: mobilityTypes) { (success, error) in
+
+        healthStore.requestAuthorization(toShare: nil, read: mobilityTypes) { success, _ in
             completion(success)
         }
     }
 
-    private func fetchMobilityData(result: @escaping FlutterResult) {
+    private func handleGetAllMobilityData(result: @escaping FlutterResult) {
+        fetchMobilityData(startDate: nil, endDate: nil, limit: HKObjectQueryNoLimit, result: result)
+    }
+
+    private func handleGetMobilityData(call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let startDateMillis = args["startDate"] as? Double,
+              let endDateMillis = args["endDate"] as? Double else {
+            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Missing startDate or endDate", details: nil))
+            return
+        }
+
+        let startDate = Date(timeIntervalSince1970: startDateMillis / 1000)
+        let endDate = Date(timeIntervalSince1970: endDateMillis / 1000)
+
+        fetchMobilityData(startDate: startDate, endDate: endDate, limit: HKObjectQueryNoLimit, result: result)
+    }
+
+    private func handleGetRecentMobilityData(call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let limit = args["limit"] as? Int else {
+            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Missing limit", details: nil))
+            return
+        }
+
+        fetchMobilityData(startDate: nil, endDate: nil, limit: limit, result: result)
+    }
+
+    private func fetchMobilityData(startDate: Date?, endDate: Date?, limit: Int, result: @escaping FlutterResult) {
         if #available(iOS 13.0, *) {
             var dataTypes: [String: HKQuantityTypeIdentifier] = [
                 "walkingSpeed": .walkingSpeed,
@@ -63,17 +95,31 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
                 dataTypes["walkingSteadiness"] = .appleWalkingSteadiness
             }
 
-            queryMobilityData(dataTypes: dataTypes, result: result)
+            queryMobilityData(dataTypes: dataTypes, startDate: startDate, endDate: endDate, limit: limit, result: result)
         } else {
             result(FlutterError(code: "UNAVAILABLE", message: "Mobility data is only available on iOS 13.0 or newer", details: nil))
         }
     }
 
     @available(iOS 13.0, *)
-    private func queryMobilityData(dataTypes: [String: HKQuantityTypeIdentifier], result: @escaping FlutterResult) {
+    private func queryMobilityData(dataTypes: [String: HKQuantityTypeIdentifier], startDate: Date?, endDate: Date?, limit: Int, result: @escaping FlutterResult) {
         let dispatchGroup = DispatchGroup()
         var allData = [String: [[String: Any]]]()
         var queryError: Error?
+
+        let predicate: NSPredicate? = {
+            if let startDate = startDate, let endDate = endDate {
+                return HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictStartDate)
+            } else if let startDate = startDate {
+                return HKQuery.predicateForSamples(withStart: startDate, end: nil, options: .strictStartDate)
+            } else if let endDate = endDate {
+                return HKQuery.predicateForSamples(withStart: nil, end: endDate, options: .strictEndDate)
+            } else {
+                return nil
+            }
+        }()
+
+        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
 
         for (key, identifier) in dataTypes {
             dispatchGroup.enter()
@@ -82,18 +128,17 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
                 continue
             }
 
-            let query = HKSampleQuery(sampleType: quantityType, predicate: nil, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { (query, samples, error) in
+            let query = HKSampleQuery(sampleType: quantityType, predicate: predicate, limit: limit, sortDescriptors: [sortDescriptor]) { _, samples, error in
+                defer { dispatchGroup.leave() }
+
                 if let error = error {
                     queryError = error
-                    dispatchGroup.leave()
                     return
                 }
 
                 var data = [[String: Any]]()
-                
                 let unit: HKUnit
 
-                // Properly guard the use of .appleWalkingSteadiness
                 if #available(iOS 15.0, *), identifier == .appleWalkingSteadiness {
                     unit = HKUnit.count()
                 } else {
@@ -104,10 +149,7 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
                         unit = HKUnit.percent()
                     case .walkingStepLength:
                         unit = HKUnit.meter()
-                    case .stepCount:
-                        unit = HKUnit.count()
                     default:
-                        dispatchGroup.leave()
                         return
                     }
                 }
@@ -115,8 +157,8 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
                 samples?.forEach { sample in
                     if let quantitySample = sample as? HKQuantitySample {
                         let value = quantitySample.quantity.doubleValue(for: unit)
-                        let startDate = quantitySample.startDate.timeIntervalSince1970
-                        let endDate = quantitySample.endDate.timeIntervalSince1970
+                        let startDate = quantitySample.startDate.timeIntervalSince1970 * 1000
+                        let endDate = quantitySample.endDate.timeIntervalSince1970 * 1000
                         data.append([
                             "value": value,
                             "startDate": startDate,
@@ -125,7 +167,6 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
                     }
                 }
                 allData[key] = data
-                dispatchGroup.leave()
             }
             healthStore.execute(query)
         }

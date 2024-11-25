@@ -23,15 +23,18 @@ abstract class MobilityPluginPlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  Future<String?> getPlatformVersion() {
-    throw UnimplementedError('getPlatformVersion() has not been implemented.');
-  }
+  Future<String?> getPlatformVersion();
 
-  Future<Map<String, dynamic>> getMobilityData() {
-    throw UnimplementedError('getMobilityData() has not been implemented.');
-  }
+  Future<Map<String, dynamic>> getAllMobilityData();
 
-  Future<void> requestAuthorization() {
-    throw UnimplementedError('requestAuthorization() has not been implemented.');
-  }
+  Future<Map<String, dynamic>> getMobilityData({
+    required DateTime startDate,
+    required DateTime endDate,
+  });
+
+  Future<Map<String, dynamic>> getRecentMobilityData({
+    required int limit,
+  });
+
+  Future<void> requestAuthorization();
 }
