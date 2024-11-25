@@ -3,13 +3,13 @@ import UIKit
 import HealthKit
 
 public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
-    private let healthStore = HKHealthStore()
+  private let healthStore = HKHealthStore()
 
-    public static func register(with registrar: FlutterPluginRegistrar) {
-        let channel = FlutterMethodChannel(name: "mobility_plugin", binaryMessenger: registrar.messenger())
-        let instance = SwiftMobilityPlugin()
-        registrar.addMethodCallDelegate(instance, channel: channel)
-    }
+  public static func register(with registrar: FlutterPluginRegistrar) {
+    let channel = FlutterMethodChannel(name: "mobility_plugin", binaryMessenger: registrar.messenger())
+    let instance = SwiftMobilityPlugin()
+    registrar.addMethodCallDelegate(instance, channel: channel)
+  }
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
@@ -29,10 +29,108 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
                     result(FlutterError(code: "AUTH_ERROR", message: "Authorization failed", details: nil))
                 }
             }
+                case "getMobilityDataByType":
+      getMobilityDataByType(call: call, result: result)
         default:
             result(FlutterMethodNotImplemented)
         }
     }
+
+private func getMobilityDataByType(call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard let args = call.arguments as? [String: Any],
+          let typeString = args["type"] as? String,
+          let startDateMillis = args["startDate"] as? Int,
+          let endDateMillis = args["endDate"] as? Int else {
+      result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid arguments for getMobilityDataByType", details: nil))
+      return
+    }
+
+    guard let quantityType = getQuantityType(from: typeString) else {
+      result(FlutterError(code: "INVALID_TYPE", message: "Invalid type: \(typeString)", details: nil))
+      return
+    }
+
+    let startDate = Date(timeIntervalSince1970: TimeInterval(startDateMillis) / 1000)
+    let endDate = Date(timeIntervalSince1970: TimeInterval(endDateMillis) / 1000)
+
+    let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])
+
+    let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+
+    let query = HKSampleQuery(sampleType: quantityType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sortDescriptor]) { (query, samples, error) in
+      if let error = error {
+        result(FlutterError(code: "ERROR_FETCHING_DATA", message: error.localizedDescription, details: nil))
+        return
+      }
+
+      guard let samples = samples as? [HKQuantitySample] else {
+        result([:])
+        return
+      }
+
+      let data = samples.map { sample -> [String: Any] in
+        return [
+          "value": sample.quantity.doubleValue(for: self.unit(for: quantityType)),
+          "startDate": Int(sample.startDate.timeIntervalSince1970 * 1000),
+          "endDate": Int(sample.endDate.timeIntervalSince1970 * 1000),
+        ]
+      }
+
+      result(["data": data])
+    }
+
+    healthStore.execute(query)
+  }
+
+  private func getQuantityType(from typeString: String) -> HKQuantityType? {
+    switch typeString {
+    case "ASYMMETRY_PERCENTAGE":
+      if #available(iOS 15.0, *) {
+        return HKQuantityType.quantityType(forIdentifier: .walkingAsymmetryPercentage)
+      }
+    case "STEP_LENGTH":
+      if #available(iOS 15.0, *) {
+        return HKQuantityType.quantityType(forIdentifier: .stepLength)
+      }
+    case "WALKING_SPEED":
+      if #available(iOS 15.0, *) {
+        return HKQuantityType.quantityType(forIdentifier: .walkingSpeed)
+      }
+    case "DOUBLE_SUPPORT_PERCENTAGE":
+      if #available(iOS 15.0, *) {
+        return HKQuantityType.quantityType(forIdentifier: .walkingDoubleSupportPercentage)
+      }
+    case "WALKING_STEADINESS":
+      if #available(iOS 15.0, *) {
+        return HKQuantityType.quantityType(forIdentifier: .walkingSteadiness)
+      }
+    default:
+      return nil
+    }
+    // Return nil if type is not available
+    return nil
+  }
+
+  private func unit(for quantityType: HKQuantityType) -> HKUnit {
+    switch quantityType.identifier {
+    case HKQuantityTypeIdentifier.walkingAsymmetryPercentage.rawValue,
+         HKQuantityTypeIdentifier.walkingDoubleSupportPercentage.rawValue:
+      return HKUnit.percent()
+
+    case HKQuantityTypeIdentifier.stepLength.rawValue:
+      return HKUnit.meter()
+
+    case HKQuantityTypeIdentifier.walkingSpeed.rawValue:
+      return HKUnit(from: "m/s")
+
+    case HKQuantityTypeIdentifier.walkingSteadiness.rawValue:
+      // Walking Steadiness is unitless; use count
+      return HKUnit.count()
+
+    default:
+      return HKUnit.count()
+    }
+  }
 
     private func requestAuthorization(completion: @escaping (Bool) -> Void) {
         var mobilityTypes: Set<HKSampleType> = [

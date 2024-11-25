@@ -11,16 +11,14 @@ class MethodChannelMobilityPlugin extends MobilityPluginPlatform {
 
   @override
   Future<String?> getPlatformVersion() async {
-    final version =
-        await methodChannel.invokeMethod<String>('getPlatformVersion');
+    final version = await methodChannel.invokeMethod<String>('getPlatformVersion');
     return version;
   }
 
   @override
   Future<Map<String, dynamic>> getAllMobilityData() async {
     try {
-      final data = await methodChannel
-          .invokeMethod<Map<dynamic, dynamic>>('getAllMobilityData');
+      final data = await methodChannel.invokeMethod<Map<dynamic, dynamic>>('getAllMobilityData');
       return data != null ? Map<String, dynamic>.from(data) : {};
     } on PlatformException catch (e) {
       throw PlatformException(
@@ -83,6 +81,31 @@ class MethodChannelMobilityPlugin extends MobilityPluginPlatform {
       throw PlatformException(
         code: 'ERROR_REQUESTING_AUTHORIZATION',
         message: 'Failed to request authorization: ${e.message}',
+        details: e.details,
+      );
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> getMobilityDataByType({
+    required String type,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      final data = await methodChannel.invokeMethod<Map<dynamic, dynamic>>(
+        'getMobilityDataByType',
+        {
+          'type': type,
+          'startDate': startDate.millisecondsSinceEpoch,
+          'endDate': endDate.millisecondsSinceEpoch,
+        },
+      );
+      return data != null ? Map<String, dynamic>.from(data) : {};
+    } on PlatformException catch (e) {
+      throw PlatformException(
+        code: 'ERROR_GETTING_MOBILITY_DATA_BY_TYPE',
+        message: 'Failed to get mobility data by type: ${e.message}',
         details: e.details,
       );
     }

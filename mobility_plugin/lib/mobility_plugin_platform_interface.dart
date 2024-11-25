@@ -1,5 +1,4 @@
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-
 import 'mobility_plugin_method_channel.dart';
 
 abstract class MobilityPluginPlatform extends PlatformInterface {
@@ -37,4 +36,10 @@ abstract class MobilityPluginPlatform extends PlatformInterface {
   });
 
   Future<void> requestAuthorization();
+
+  Future<Map<String, dynamic>> getMobilityDataByType({
+    required String type,
+    required DateTime startDate,
+    required DateTime endDate,
+  });
 }
