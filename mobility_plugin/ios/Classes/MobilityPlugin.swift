@@ -199,12 +199,19 @@ private func getMobilityDataByType(call: FlutterMethodCall, result: @escaping Fl
         }
     }
 
-    @available(iOS 13.0, *)
-    private func queryMobilityData(dataTypes: [String: HKQuantityTypeIdentifier], startDate: Date?, endDate: Date?, limit: Int, result: @escaping FlutterResult) {
-        let dispatchGroup = DispatchGroup()
-        var allData = [String: [[String: Any]]]()
-        var queryError: Error?
+@available(iOS 13.0, *)
+private func queryMobilityData(dataTypes: [String: HKQuantityTypeIdentifier], startDate: Date?, endDate: Date?, limit: Int, result: @escaping FlutterResult) {
+    // Prepare an array to hold data type keys and their corresponding HKQuantityType
+    var dataTypesArray: [(key: String, type: HKQuantityType)] = []
 
+    // Map the identifiers to HKQuantityType and collect them with their keys
+    for (key, identifier) in dataTypes {
+        if let quantityType = HKQuantityType.quantityType(forIdentifier: identifier) {
+            dataTypesArray.append((key: key, type: quantityType))
+        }
+    }
+
+    // Create the predicate based on the provided start and end dates
     let predicate: NSPredicate? = {
         if let startDate = startDate, let endDate = endDate {
             return HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [.strictStartDate, .strictEndDate])
@@ -217,57 +224,59 @@ private func getMobilityDataByType(call: FlutterMethodCall, result: @escaping Fl
         }
     }()
 
-        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+    // Prepare the sort descriptor
+    let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
 
-        for (key, identifier) in dataTypes {
-            dispatchGroup.enter()
-            guard let quantityType = HKQuantityType.quantityType(forIdentifier: identifier) else {
-                dispatchGroup.leave()
-                continue
-            }
+    // Create an array of HKQueryDescriptor for each data type
+    var descriptors: [HKQueryDescriptor] = []
+    for (_, type) in dataTypesArray {
+        let descriptor = HKQueryDescriptor(sampleType: type, predicate: predicate)
+        descriptors.append(descriptor)
+    }
 
-            let query = HKSampleQuery(sampleType: quantityType, predicate: predicate, limit: limit, sortDescriptors: [sortDescriptor]) { _, samples, error in
-                defer { dispatchGroup.leave() }
+    // Map sample type identifiers to their corresponding keys
+    var identifierToKey: [String: String] = [:]
+    for (key, type) in dataTypesArray {
+        identifierToKey[type.identifier] = key
+    }
 
-                if let error = error {
-                    queryError = error
-                    return
-                }
-
-                var data = [[String: Any]]()
-                let unit: HKUnit
-
-                if #available(iOS 15.0, *), identifier == .appleWalkingSteadiness {
-                    unit = HKUnit.count()
-                } else {
-                    switch identifier {
-                    case .walkingSpeed:
-                        unit = HKUnit.meter().unitDivided(by: HKUnit.second())
-                    case .walkingDoubleSupportPercentage, .walkingAsymmetryPercentage:
-                        unit = HKUnit.percent()
-                    case .walkingStepLength:
-                        unit = HKUnit.meter()
-                    default:
-                        return
-                    }
-                }
-
-                samples?.forEach { sample in
-                    if let quantitySample = sample as? HKQuantitySample {
-                        let value = quantitySample.quantity.doubleValue(for: unit)
-                        let startDate = quantitySample.startDate.timeIntervalSince1970 * 1000
-                        let endDate = quantitySample.endDate.timeIntervalSince1970 * 1000
-                        data.append([
-                            "value": value,
-                            "startDate": startDate,
-                            "endDate": endDate
-                        ])
-                    }
-                }
-                allData[key] = data
-            }
-            healthStore.execute(query)
+    // Create a single HKSampleQuery with the descriptors
+    let query = HKSampleQuery(queryDescriptors: descriptors, limit: limit, sortDescriptors: [sortDescriptor]) { query, samples, error in
+        if let error = error {
+            result(FlutterError(code: "FETCH_ERROR", message: error.localizedDescription, details: nil))
+            return
         }
+
+        // Process the samples and organize them by their corresponding keys
+        var allData = [String: [[String: Any]]]()
+        for sample in samples ?? [] {
+            if let quantitySample = sample as? HKQuantitySample {
+                let identifier = quantitySample.sampleType.identifier
+                guard let key = identifierToKey[identifier] else {
+                    continue
+                }
+                let unit = self.unit(for: quantitySample.quantityType)
+                let value = quantitySample.quantity.doubleValue(for: unit)
+                let startDate = Int(quantitySample.startDate.timeIntervalSince1970 * 1000)
+                let endDate = Int(quantitySample.endDate.timeIntervalSince1970 * 1000)
+
+                var dataArray = allData[key] ?? []
+                dataArray.append([
+                    "value": value,
+                    "startDate": startDate,
+                    "endDate": endDate
+                ])
+                allData[key] = dataArray
+            }
+        }
+
+        // Return the organized data
+        result(allData)
+    }
+
+    // Execute the query
+    healthStore.execute(query)
+}
 
         dispatchGroup.notify(queue: .main) {
             if let error = queryError {
