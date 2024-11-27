@@ -47,23 +47,26 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private func getMobilityDataByType(call: FlutterMethodCall, result: @escaping FlutterResult) {
-        log("getMobilityDataByType called with arguments: \(String(describing: call.arguments))")
-        guard let args = call.arguments as? [String: Any],
-              let typeString = args["type"] as? String,
-              let startDateMillis = args["startDate"] as? Int,
-              let endDateMillis = args["endDate"] as? Int else {
-            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid arguments for getMobilityDataByType", details: nil))
-            return
-        }
+private func getMobilityDataByType(call: FlutterMethodCall, result: @escaping FlutterResult) {
+    log("getMobilityDataByType called with arguments: \(String(describing: call.arguments))")
+    guard let args = call.arguments as? [String: Any],
+          let typeString = args["type"] as? String,
+          let startDateMillis = args["startDate"] as? Int,
+          let endDateMillis = args["endDate"] as? Int else {
+        result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid arguments for getMobilityDataByType", details: nil))
+        return
+    }
 
         guard let quantityType = getQuantityType(from: typeString) else {
             result(FlutterError(code: "INVALID_TYPE", message: "Invalid type: \(typeString)", details: nil))
             return
         }
 
-        let startDate = Date(timeIntervalSince1970: TimeInterval(startDateMillis) / 1000)
-        let endDate = Date(timeIntervalSince1970: TimeInterval(endDateMillis) / 1000)
+    let startDate = Date(timeIntervalSince1970: TimeInterval(startDateMillis) / 1000)
+    let endDate = Date(timeIntervalSince1970: TimeInterval(endDateMillis) / 1000)
+
+    // Log the converted dates for debugging
+    log("Converted startDate: \(startDate), endDate: \(endDate)")
 
         let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])
 
@@ -174,20 +177,23 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
         fetchMobilityData(startDate: nil, endDate: nil, limit: HKObjectQueryNoLimit, result: result)
     }
 
-    private func handleGetMobilityData(call: FlutterMethodCall, result: @escaping FlutterResult) {
-        log("Handling getMobilityData with arguments: \(String(describing: call.arguments))")
-        guard let args = call.arguments as? [String: Any],
-              let startDateMillis = args["startDate"] as? Double,
-              let endDateMillis = args["endDate"] as? Double else {
-            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Missing startDate or endDate", details: nil))
-            return
-        }
-
-        let startDate = Date(timeIntervalSince1970: startDateMillis / 1000)
-        let endDate = Date(timeIntervalSince1970: endDateMillis / 1000)
-
-        fetchMobilityData(startDate: startDate, endDate: endDate, limit: HKObjectQueryNoLimit, result: result)
+private func handleGetMobilityData(call: FlutterMethodCall, result: @escaping FlutterResult) {
+    log("Handling getMobilityData with arguments: \(String(describing: call.arguments))")
+    guard let args = call.arguments as? [String: Any],
+          let startDateMillis = args["startDate"] as? Int,
+          let endDateMillis = args["endDate"] as? Int else {
+        result(FlutterError(code: "INVALID_ARGUMENTS", message: "Missing startDate or endDate", details: nil))
+        return
     }
+
+    let startDate = Date(timeIntervalSince1970: TimeInterval(startDateMillis) / 1000)
+    let endDate = Date(timeIntervalSince1970: TimeInterval(endDateMillis) / 1000)
+
+    // Log the converted dates for debugging
+    log("Converted startDate: \(startDate), endDate: \(endDate)")
+
+    fetchMobilityData(startDate: startDate, endDate: endDate, limit: HKObjectQueryNoLimit, result: result)
+}
 
     private func handleGetRecentMobilityData(call: FlutterMethodCall, result: @escaping FlutterResult) {
         log("Handling getRecentMobilityData with arguments: \(String(describing: call.arguments))")
@@ -227,17 +233,21 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
         var allData = [String: [[String: Any]]]()
         var queryError: Error?
 
-        let predicate: NSPredicate? = {
-            if let startDate = startDate, let endDate = endDate {
-                return HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [.strictStartDate, .strictEndDate])
-            } else if let startDate = startDate {
-                return HKQuery.predicateForSamples(withStart: startDate, end: nil, options: [.strictStartDate])
-            } else if let endDate = endDate {
-                return HKQuery.predicateForSamples(withStart: nil, end: endDate, options: [.strictEndDate])
-            } else {
-                return nil
-            }
-        }()
+let predicate: NSPredicate? = {
+    if let startDate = startDate, let endDate = endDate {
+        log("Creating predicate with startDate: \(startDate), endDate: \(endDate)")
+        return HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])
+    } else if let startDate = startDate {
+        log("Creating predicate with startDate: \(startDate)")
+        return HKQuery.predicateForSamples(withStart: startDate, end: nil, options: [])
+    } else if let endDate = endDate {
+        log("Creating predicate with endDate: \(endDate)")
+        return HKQuery.predicateForSamples(withStart: nil, end: endDate, options: [])
+    } else {
+        log("No startDate or endDate provided; predicate will be nil")
+        return nil
+    }
+}()
 
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
 
