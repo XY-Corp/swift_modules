@@ -59,8 +59,16 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> fetchMobilityData() async {
+    // Define the start and end dates
+    DateTime endDate = DateTime.now();
+    DateTime startDate = DateTime.now().subtract(const Duration(days: 7)); // Last 7 days
+
     try {
-      Map<String, dynamic> rawData = await _mobilityPlugin.getMobilityData();
+      // Pass startDate and endDate to getMobilityData
+      Map<String, dynamic> rawData = await _mobilityPlugin.getMobilityData(
+        startDate: startDate,
+        endDate: endDate,
+      );
       if (!mounted) return;
 
       setState(() {

@@ -22,9 +22,15 @@ class MobilityPlugin {
     }
   }
 
-  Future<Map<String, dynamic>> getMobilityData() async {
+  Future<Map<String, dynamic>> getMobilityData({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
     try {
-      final Map<dynamic, dynamic>? result = await _channel.invokeMethod('getMobilityData');
+      final Map<dynamic, dynamic>? result = await _channel.invokeMethod('getMobilityData', {
+        'startDate': startDate.millisecondsSinceEpoch,
+        'endDate': endDate.millisecondsSinceEpoch,
+      });
       if (result == null) {
         return {};
       } else {
