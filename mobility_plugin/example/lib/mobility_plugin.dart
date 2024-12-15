@@ -1,22 +1,21 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
+import 'package:mobility_plugin/mobility_plugin_platform_interface.dart';
 
 class MobilityPlugin {
-  static const MethodChannel _channel = MethodChannel('mobility_plugin');
+  static final MobilityPluginPlatform _platform = MobilityPluginPlatform.instance;
 
   Future<String?> getPlatformVersion() async {
     try {
-      final String? version = await _channel.invokeMethod('getPlatformVersion');
-      return version;
+      return await _platform.getPlatformVersion();
     } on PlatformException catch (e) {
       throw 'Failed to get platform version: ${e.message}';
     }
   }
 
-  // New method to request authorization
   Future<void> requestAuthorization() async {
     try {
-      await _channel.invokeMethod('requestAuthorization');
+      await _platform.requestAuthorization();
     } on PlatformException catch (e) {
       throw 'Failed to request authorization: ${e.message}';
     }
@@ -27,17 +26,30 @@ class MobilityPlugin {
     required DateTime endDate,
   }) async {
     try {
-      final Map<dynamic, dynamic>? result = await _channel.invokeMethod('getMobilityData', {
-        'startDate': startDate.millisecondsSinceEpoch,
-        'endDate': endDate.millisecondsSinceEpoch,
-      });
-      if (result == null) {
-        return {};
-      } else {
-        return Map<String, dynamic>.from(result);
-      }
+      return await _platform.getMobilityData(
+        startDate: startDate,
+        endDate: endDate,
+      );
     } on PlatformException catch (e) {
       throw 'Failed to get mobility data: ${e.message}';
     }
+  }
+
+  /// Fetches mindfulness data within a date range.
+  Future<List<Map<String, dynamic>>> getMindfulnessData({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) {
+    return _platform.getMindfulnessData(
+      startDate: startDate,
+      endDate: endDate,
+    );
+  }
+
+  /// Fetches recent mindfulness data with a limit.
+  Future<List<Map<String, dynamic>>> getRecentMindfulnessData({
+    required int limit,
+  }) {
+    return _platform.getRecentMindfulnessData(limit: limit);
   }
 }

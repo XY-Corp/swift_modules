@@ -42,6 +42,10 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
             }
         case "getMobilityDataByType":
             getMobilityDataByType(call: call, result: result)
+        case "getMindfulnessData":
+            handleGetMindfulnessData(call: call, result: result)
+        case "getRecentMindfulnessData":
+            handleGetRecentMindfulnessData(call: call, result: result)
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -153,27 +157,31 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
 
     private func requestAuthorization(completion: @escaping (Bool) -> Void) {
         log("Requesting authorization")
-        var mobilityTypes: Set<HKSampleType> = []
+        var readTypes: Set<HKSampleType> = []
 
         if #available(iOS 13.0, *) {
             if let walkingSpeed = HKObjectType.quantityType(forIdentifier: .walkingSpeed),
                let doubleSupportPercentage = HKObjectType.quantityType(forIdentifier: .walkingDoubleSupportPercentage),
                let stepLength = HKObjectType.quantityType(forIdentifier: .walkingStepLength) {
-                mobilityTypes.insert(walkingSpeed)
-                mobilityTypes.insert(doubleSupportPercentage)
-                mobilityTypes.insert(stepLength)
+                readTypes.insert(walkingSpeed)
+                readTypes.insert(doubleSupportPercentage)
+                readTypes.insert(stepLength)
             }
         }
 
         if #available(iOS 15.0, *) {
             if let asymmetryPercentage = HKObjectType.quantityType(forIdentifier: .walkingAsymmetryPercentage),
                let walkingSteadiness = HKObjectType.quantityType(forIdentifier: .appleWalkingSteadiness) {
-                mobilityTypes.insert(asymmetryPercentage)
-                mobilityTypes.insert(walkingSteadiness)
+                readTypes.insert(asymmetryPercentage)
+                readTypes.insert(walkingSteadiness)
             }
         }
 
-        healthStore.requestAuthorization(toShare: nil, read: mobilityTypes) { success, _ in
+        if let mindfulnessType = HKObjectType.categoryType(forIdentifier: .mindfulSession) {
+            readTypes.insert(mindfulnessType)
+        }
+
+        healthStore.requestAuthorization(toShare: nil, read: readTypes) { success, _ in
             log("Authorization success: \(success)")
             completion(success)
         }
@@ -319,6 +327,82 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
                 result(allData)
             }
         }
+    }
+
+    private func handleGetMindfulnessData(call: FlutterMethodCall, result: @escaping FlutterResult) {
+        log("Handling getMindfulnessData with arguments: \(String(describing: call.arguments))")
+        guard let args = call.arguments as? [String: Any],
+              let startDateMillis = args["startDate"] as? Int,
+              let endDateMillis = args["endDate"] as? Int else {
+            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Missing startDate or endDate", details: nil))
+            return
+        }
+
+        let startDate = Date(timeIntervalSince1970: TimeInterval(startDateMillis) / 1000)
+        let endDate = Date(timeIntervalSince1970: TimeInterval(endDateMillis) / 1000)
+
+        fetchMindfulnessData(startDate: startDate, endDate: endDate, limit: HKObjectQueryNoLimit, result: result)
+    }
+
+    private func handleGetRecentMindfulnessData(call: FlutterMethodCall, result: @escaping FlutterResult) {
+        log("Handling getRecentMindfulnessData with arguments: \(String(describing: call.arguments))")
+        guard let args = call.arguments as? [String: Any],
+              let limit = args["limit"] as? Int else {
+            result(FlutterError(code: "INVALID_ARGUMENTS", message: "Missing limit", details: nil))
+            return
+        }
+
+        fetchMindfulnessData(startDate: nil, endDate: nil, limit: limit, result: result)
+    }
+
+    private func fetchMindfulnessData(startDate: Date?, endDate: Date?, limit: Int, result: @escaping FlutterResult) {
+        log("Fetching mindfulness data with startDate: \(String(describing: startDate)), endDate: \(String(describing: endDate)), limit: \(limit)")
+
+        guard let mindfulnessType = HKObjectType.categoryType(forIdentifier: .mindfulSession) else {
+            result(FlutterError(code: "UNAVAILABLE", message: "Mindfulness data is not available", details: nil))
+            return
+        }
+
+        let predicate: NSPredicate? = {
+            if let startDate = startDate, let endDate = endDate {
+                return HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])
+            } else if let startDate = startDate {
+                return HKQuery.predicateForSamples(withStart: startDate, end: nil, options: [])
+            } else if let endDate = endDate {
+                return HKQuery.predicateForSamples(withStart: nil, end: endDate, options: [])
+            } else {
+                return nil
+            }
+        }()
+
+        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+
+        let query = HKSampleQuery(sampleType: mindfulnessType, predicate: predicate, limit: limit, sortDescriptors: [sortDescriptor]) { _, samples, error in
+            if let error = error {
+                log("Error querying mindfulness data: \(error.localizedDescription)")
+                result(FlutterError(code: "FETCH_ERROR", message: error.localizedDescription, details: nil))
+                return
+            }
+
+            var data = [[String: Any]]()
+
+            samples?.forEach { sample in
+                if let categorySample = sample as? HKCategorySample {
+                    let startDate = categorySample.startDate.timeIntervalSince1970 * 1000
+                    let endDate = categorySample.endDate.timeIntervalSince1970 * 1000
+                    let value = categorySample.value // Usually HKCategoryValueNotApplicable
+                    data.append([
+                        "startDate": startDate,
+                        "endDate": endDate,
+                        "value": value
+                    ])
+                }
+            }
+            log("Fetched mindfulness data: \(data)")
+            result(data)
+        }
+
+        healthStore.execute(query)
     }
 
     private func getPlatformVersion(result: @escaping FlutterResult) {
