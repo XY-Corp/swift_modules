@@ -112,4 +112,52 @@ class MethodChannelMobilityPlugin extends MobilityPluginPlatform {
       );
     }
   }
+
+  @override
+  Future<List<Map<String, dynamic>>> getMindfulnessData({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      final List<dynamic>? data = await methodChannel.invokeMethod<List<dynamic>>(
+        'getMindfulnessData',
+        {
+          'startDate': startDate.millisecondsSinceEpoch,
+          'endDate': endDate.millisecondsSinceEpoch,
+        },
+      );
+      return data != null
+          ? data.map((e) => Map<String, dynamic>.from(e)).toList()
+          : [];
+    } on PlatformException catch (e) {
+      throw PlatformException(
+        code: 'ERROR_GETTING_MINDFULNESS_DATA',
+        message: 'Failed to get mindfulness data: ${e.message}',
+        details: e.details,
+      );
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getRecentMindfulnessData({
+    required int limit,
+  }) async {
+    try {
+      final List<dynamic>? data = await methodChannel.invokeMethod<List<dynamic>>(
+        'getRecentMindfulnessData',
+        {
+          'limit': limit,
+        },
+      );
+      return data != null
+          ? data.map((e) => Map<String, dynamic>.from(e)).toList()
+          : [];
+    } on PlatformException catch (e) {
+      throw PlatformException(
+        code: 'ERROR_GETTING_RECENT_MINDFULNESS_DATA',
+        message: 'Failed to get recent mindfulness data: ${e.message}',
+        details: e.details,
+      );
+    }
+  }
 }

@@ -4,31 +4,30 @@ import 'package:mobility_plugin/mobility_plugin_platform_interface.dart';
 import 'package:mobility_plugin/mobility_plugin_method_channel.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
-class MockMobilityPluginPlatform
-    with MockPlatformInterfaceMixin
-    implements MobilityPluginPlatform {
-
+class MockMobilityPluginPlatform extends MobilityPluginPlatform {
   @override
-  Future<String?> getPlatformVersion() => Future.value('42');
+  Future<String?> getPlatformVersion() async {
+    return 'Mock Platform Version';
+  }
 
   @override
   Future<Map<String, dynamic>> getMobilityData({
     required DateTime startDate,
     required DateTime endDate,
-  }) => Future.value({
-        'walkingSpeed': [
-          {
-            'value': 1.5,
-            'startDate': startDate.millisecondsSinceEpoch ~/ 1000,
-            'endDate': endDate.millisecondsSinceEpoch ~/ 1000,
-          },
-          // Add more mock data if needed
-        ],
-        // Add other mobility data if needed
-      });
+  }) async {
+    return {
+      'walkingSpeed': [
+        {
+          'value': 1.5,
+          'startDate': startDate.millisecondsSinceEpoch ~/ 1000,
+          'endDate': endDate.millisecondsSinceEpoch ~/ 1000,
+        },
+      ],
+    };
+  }
 
   @override
-  Future<void> requestAuthorization() => Future.value();
+  Future<void> requestAuthorization() async {}
 
   @override
   Future<Map<String, dynamic>> getAllMobilityData() {
@@ -40,8 +39,8 @@ class MockMobilityPluginPlatform
     required String type,
     required DateTime startDate,
     required DateTime endDate,
-  }) {
-    return Future.value({
+  }) async {
+    return {
       'data': [
         {
           'value': 1.8,
@@ -49,19 +48,46 @@ class MockMobilityPluginPlatform
           'endDate': endDate.millisecondsSinceEpoch,
         },
       ],
-    });
+    };
   }
 
   @override
   Future<Map<String, dynamic>> getRecentMobilityData({
     required int limit,
-  }) {
-    return Future.value({
+  }) async {
+    return {
       'walkingSpeed': List.generate(limit, (index) => {
         'value': 1.5 + index * 0.1,
         'startDate': DateTime.now().millisecondsSinceEpoch - index * 60000,
         'endDate': DateTime.now().millisecondsSinceEpoch - index * 60000 + 5000,
       }),
+    };
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getMindfulnessData({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    return [
+      {
+        'startDate': startDate.millisecondsSinceEpoch,
+        'endDate': endDate.millisecondsSinceEpoch,
+        'value': 0,
+      },
+    ];
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getRecentMindfulnessData({
+    required int limit,
+  }) async {
+    return List.generate(limit, (index) {
+      return {
+        'startDate': DateTime.now().millisecondsSinceEpoch - index * 60000,
+        'endDate': DateTime.now().millisecondsSinceEpoch - index * 60000 + 300000,
+        'value': 0,
+      };
     });
   }
 }
@@ -78,7 +104,7 @@ void main() {
     MockMobilityPluginPlatform fakePlatform = MockMobilityPluginPlatform();
     MobilityPluginPlatform.instance = fakePlatform;
 
-    expect(await mobilityPlugin.getPlatformVersion(), '42');
+    expect(await mobilityPlugin.getPlatformVersion(), 'Mock Platform Version');
   });
 
   test('getMobilityData', () async {

@@ -42,4 +42,15 @@ abstract class MobilityPluginPlatform extends PlatformInterface {
     required DateTime startDate,
     required DateTime endDate,
   });
+
+  /// Fetches mindfulness data within a date range.
+  Future<List<Map<String, dynamic>>> getMindfulnessData({
+    required DateTime startDate,
+    required DateTime endDate,
+  });
+
+  /// Fetches recent mindfulness data with a limit.
+  Future<List<Map<String, dynamic>>> getRecentMindfulnessData({
+    required int limit,
+  });
 }
