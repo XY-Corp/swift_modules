@@ -91,7 +91,7 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  Future<void> fetchMindfulnessData() async {
+  Future<void> fetchMindfulnessData() async { 
     DateTime endDate = DateTime.now();
     DateTime startDate = DateTime.now().subtract(const Duration(days: 7)); // Last 7 days
 
