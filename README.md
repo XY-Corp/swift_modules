@@ -76,10 +76,9 @@ Add the following to your `pubspec.yaml`:
 dependencies:
   mobility_plugin:
     git:
-      url: https://github.com/your_username/mobility_plugin.git
+      url: url: https://github.com/XY-Corp/swift_modules.git
 ```
 
-Replace `your_username` with your GitHub username if you have the plugin hosted there.  
 Run `flutter pub get` to fetch the plugin.
 
 ### Usage
