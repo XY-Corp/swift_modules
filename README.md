@@ -119,3 +119,11 @@ In your app ensure you have included the necessary permissions in your `Info.pli
 <key>NSHealthShareUsageDescription</key>
 <string>Need access to health data for mobility metrics.</string>
 ```
+<img width="441" alt="Screenshot 2024-12-09 at 4 41 13 PM" src="https://github.com/user-attachments/assets/6b2f068a-7fa4-4b4c-b5de-307e8ddea8c0" />
+
+`/example`
+<img width="482" alt="Screenshot 2025-01-05 at 4 01 11 PM" src="https://github.com/user-attachments/assets/f04bfe7d-f127-411a-ae6e-c0b79be8a95f" />
+
+
+
+
