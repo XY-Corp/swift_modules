@@ -433,7 +433,7 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
                     let endDate = categorySample.endDate.timeIntervalSince1970 * 1000
                     let value = categorySample.value // Usually HKCategoryValueNotApplicable
                     data.append([
-                        "startDate": startDate,what 
+                        "startDate": startDate,
                         "endDate": endDate,
                         "value": value
                     ])
