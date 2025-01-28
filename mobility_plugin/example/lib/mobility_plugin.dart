@@ -3,7 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:mobility_plugin/mobility_plugin_platform_interface.dart';
 
 class MobilityPlugin {
-  static final MobilityPluginPlatform _platform = MobilityPluginPlatform.instance;
+  static final MobilityPluginPlatform _platform =
+      MobilityPluginPlatform.instance;
 
   Future<String?> getPlatformVersion() async {
     try {
@@ -13,11 +14,11 @@ class MobilityPlugin {
     }
   }
 
-  Future<void> requestAuthorization() async {
+  Future<bool> requestAuthorization() async {
     try {
-      await _platform.requestAuthorization();
+      return await _platform.requestAuthorization();
     } on PlatformException catch (e) {
-      throw 'Failed to request authorization: ${e.message}';
+      return false;
     }
   }
 

@@ -27,14 +27,14 @@ class MobilityPlugin {
     return _platform.getRecentMobilityData(limit: limit);
   }
 
-  Future<void> requestAuthorization() {
+  Future<bool> requestAuthorization() {
     return _platform.requestAuthorization();
   }
 
   Future<bool> hasMobilityPermissions() {
     return _platform.hasMobilityPermissions();
   }
-  
+
   Future<Map<String, dynamic>> getMobilityDataByType({
     required String type,
     required DateTime startDate,
