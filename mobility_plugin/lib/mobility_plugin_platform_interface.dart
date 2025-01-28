@@ -37,6 +37,8 @@ abstract class MobilityPluginPlatform extends PlatformInterface {
 
   Future<bool> requestAuthorization();
 
+  Future<bool> hasMobilityPermissions();
+  
   Future<Map<String, dynamic>> getMobilityDataByType({
     required String type,
     required DateTime startDate,

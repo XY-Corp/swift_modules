@@ -31,6 +31,11 @@ class MockMobilityPluginPlatform extends MobilityPluginPlatform {
   }
 
   @override
+  Future<bool> hasMobilityPermissions() async {
+    return true;
+  }
+
+  @override
   Future<Map<String, dynamic>> getAllMobilityData() {
     throw UnimplementedError();
   }

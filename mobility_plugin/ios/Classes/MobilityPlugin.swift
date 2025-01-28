@@ -43,6 +43,8 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
             handleGetMindfulnessData(call: call, result: result)
         case "getRecentMindfulnessData":
             handleGetRecentMindfulnessData(call: call, result: result)
+        case "hasMobilityPermissions":
+            checkHasMobilityPermissions(result: result)
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -350,6 +352,48 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
         }
 
         fetchMindfulnessData(startDate: nil, endDate: nil, limit: limit, result: result)
+    }
+
+    private func checkHasMobilityPermissions(result: @escaping FlutterResult) {
+        log("Checking mobility permissions")
+
+        // Gather all relevant data types that we request
+        var readTypes: Set<HKSampleType> = []
+
+        if #available(iOS 13.0, *) {
+            if let walkingSpeed = HKObjectType.quantityType(forIdentifier: .walkingSpeed),
+               let doubleSupportPercentage = HKObjectType.quantityType(forIdentifier: .walkingDoubleSupportPercentage),
+               let stepLength = HKObjectType.quantityType(forIdentifier: .walkingStepLength) {
+                readTypes.insert(walkingSpeed)
+                readTypes.insert(doubleSupportPercentage)
+                readTypes.insert(stepLength)
+            }
+        }
+        
+        if #available(iOS 15.0, *) {
+            if let asymmetryPercentage = HKObjectType.quantityType(forIdentifier: .walkingAsymmetryPercentage),
+               let walkingSteadiness = HKObjectType.quantityType(forIdentifier: .appleWalkingSteadiness) {
+                readTypes.insert(asymmetryPercentage)
+                readTypes.insert(walkingSteadiness)
+            }
+        }
+        
+        if let mindfulnessType = HKObjectType.categoryType(forIdentifier: .mindfulSession) {
+            readTypes.insert(mindfulnessType)
+        }
+
+        // Check if each type is authorized
+        for sampleType in readTypes {
+            let status = healthStore.authorizationStatus(for: sampleType)
+            if status != .sharingAuthorized {
+                // If any type is not authorized, return false
+                result(false)
+                return
+            }
+        }
+
+        // If we reach here, all relevant types had sharingAuthorized
+        result(true)
     }
 
     private func fetchMindfulnessData(startDate: Date?, endDate: Date?, limit: Int, result: @escaping FlutterResult) {

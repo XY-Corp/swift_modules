@@ -92,6 +92,22 @@ class MethodChannelMobilityPlugin extends MobilityPluginPlatform {
   }
 
   @override
+  Future<bool> hasMobilityPermissions() async {
+    try {
+      final bool? granted =
+          await methodChannel.invokeMethod<bool>('hasMobilityPermissions');
+      // Return true if native side returned true, otherwise false
+      return granted == true;
+    } on PlatformException catch (e) {
+      throw PlatformException(
+        code: 'ERROR_CHECKING_MOBILITY_PERMISSIONS',
+        message: 'Failed to check mobility permissions: ${e.message}',
+        details: e.details,
+      );
+    }
+  }
+  
+  @override
   Future<Map<String, dynamic>> getMobilityDataByType({
     required String type,
     required DateTime startDate,
