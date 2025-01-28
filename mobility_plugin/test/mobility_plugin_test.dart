@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobility_plugin/mobility_plugin.dart';
 import 'package:mobility_plugin/mobility_plugin_platform_interface.dart';
 import 'package:mobility_plugin/mobility_plugin_method_channel.dart';
-import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 class MockMobilityPluginPlatform extends MobilityPluginPlatform {
   @override
@@ -27,7 +26,9 @@ class MockMobilityPluginPlatform extends MobilityPluginPlatform {
   }
 
   @override
-  Future<void> requestAuthorization() async {}
+  Future<bool> requestAuthorization() async {
+    return true;
+  }
 
   @override
   Future<Map<String, dynamic>> getAllMobilityData() {
@@ -56,11 +57,16 @@ class MockMobilityPluginPlatform extends MobilityPluginPlatform {
     required int limit,
   }) async {
     return {
-      'walkingSpeed': List.generate(limit, (index) => {
-        'value': 1.5 + index * 0.1,
-        'startDate': DateTime.now().millisecondsSinceEpoch - index * 60000,
-        'endDate': DateTime.now().millisecondsSinceEpoch - index * 60000 + 5000,
-      }),
+      'walkingSpeed': List.generate(
+          limit,
+          (index) => {
+                'value': 1.5 + index * 0.1,
+                'startDate':
+                    DateTime.now().millisecondsSinceEpoch - index * 60000,
+                'endDate': DateTime.now().millisecondsSinceEpoch -
+                    index * 60000 +
+                    5000,
+              }),
     };
   }
 
@@ -85,7 +91,8 @@ class MockMobilityPluginPlatform extends MobilityPluginPlatform {
     return List.generate(limit, (index) {
       return {
         'startDate': DateTime.now().millisecondsSinceEpoch - index * 60000,
-        'endDate': DateTime.now().millisecondsSinceEpoch - index * 60000 + 300000,
+        'endDate':
+            DateTime.now().millisecondsSinceEpoch - index * 60000 + 300000,
         'value': 0,
       };
     });
@@ -93,7 +100,8 @@ class MockMobilityPluginPlatform extends MobilityPluginPlatform {
 }
 
 void main() {
-  final MobilityPluginPlatform initialPlatform = MobilityPluginPlatform.instance;
+  final MobilityPluginPlatform initialPlatform =
+      MobilityPluginPlatform.instance;
 
   test('$MethodChannelMobilityPlugin is the default instance', () {
     expect(initialPlatform, isInstanceOf<MethodChannelMobilityPlugin>());

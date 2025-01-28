@@ -76,9 +76,12 @@ class MethodChannelMobilityPlugin extends MobilityPluginPlatform {
   }
 
   @override
-  Future<void> requestAuthorization() async {
+  Future<bool> requestAuthorization() async {
     try {
-      await methodChannel.invokeMethod('requestAuthorization');
+      // Because we expect a bool from the native side (true / false)
+      final bool? success = await methodChannel.invokeMethod<bool>('requestAuthorization');
+      // Return true if `success` from native is `true`, otherwise false
+      return success == true;
     } on PlatformException catch (e) {
       throw PlatformException(
         code: 'ERROR_REQUESTING_AUTHORIZATION',

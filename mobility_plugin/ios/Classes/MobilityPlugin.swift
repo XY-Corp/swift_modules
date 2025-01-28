@@ -34,11 +34,8 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
             getPlatformVersion(result: result)
         case "requestAuthorization":
             requestAuthorization { success in
-                if success {
-                    result(nil)
-                } else {
-                    result(FlutterError(code: "AUTH_ERROR", message: "Authorization failed", details: nil))
-                }
+                // Instead of returning nil on success, return true/false
+                result(success)
             }
         case "getMobilityDataByType":
             getMobilityDataByType(call: call, result: result)
@@ -392,7 +389,7 @@ public class SwiftMobilityPlugin: NSObject, FlutterPlugin {
                     let endDate = categorySample.endDate.timeIntervalSince1970 * 1000
                     let value = categorySample.value // Usually HKCategoryValueNotApplicable
                     data.append([
-                        "startDate": startDate,
+                        "startDate": startDate,what 
                         "endDate": endDate,
                         "value": value
                     ])
