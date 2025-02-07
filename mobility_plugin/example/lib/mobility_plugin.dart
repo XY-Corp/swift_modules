@@ -35,22 +35,4 @@ class MobilityPlugin {
       throw 'Failed to get mobility data: ${e.message}';
     }
   }
-
-  /// Fetches mindfulness data within a date range.
-  Future<List<Map<String, dynamic>>> getMindfulnessData({
-    required DateTime startDate,
-    required DateTime endDate,
-  }) {
-    return _platform.getMindfulnessData(
-      startDate: startDate,
-      endDate: endDate,
-    );
-  }
-
-  /// Fetches recent mindfulness data with a limit.
-  Future<List<Map<String, dynamic>>> getRecentMindfulnessData({
-    required int limit,
-  }) {
-    return _platform.getRecentMindfulnessData(limit: limit);
-  }
 }

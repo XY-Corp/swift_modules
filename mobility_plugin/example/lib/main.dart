@@ -18,7 +18,6 @@ class _MyAppState extends State<MyApp> {
   final MobilityPlugin _mobilityPlugin = MobilityPlugin();
   String _platformVersion = 'Unknown';
   Map<String, List<Map<String, dynamic>>> _mobilityData = {};
-  List<Map<String, dynamic>> _mindfulnessData = [];
   String? _errorMessage;
 
   @override
@@ -30,7 +29,8 @@ class _MyAppState extends State<MyApp> {
   Future<void> initPlatformState() async {
     String platformVersion;
     try {
-      platformVersion = await _mobilityPlugin.getPlatformVersion() ?? 'Unknown platform version';
+      platformVersion = await _mobilityPlugin.getPlatformVersion() ??
+          'Unknown platform version';
     } on PlatformException catch (e) {
       platformVersion = 'Failed to get platform version: ${e.message}';
     }
@@ -42,26 +42,10 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  Future<void> requestAuthorization() async {
-    try {
-      await _mobilityPlugin.requestAuthorization();
-      if (!mounted) return;
-
-      setState(() {
-        _errorMessage = null;
-      });
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        _errorMessage = 'Failed to request authorization: $e';
-      });
-    }
-  }
-
   Future<void> fetchMobilityData() async {
     DateTime endDate = DateTime.now();
-    DateTime startDate = DateTime.now().subtract(const Duration(days: 7)); // Last 7 days
+    DateTime startDate =
+        DateTime.now().subtract(const Duration(days: 7)); // Last 7 days
 
     try {
       Map<String, dynamic> rawData = await _mobilityPlugin.getMobilityData(
@@ -91,27 +75,19 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  Future<void> fetchMindfulnessData() async { 
-    DateTime endDate = DateTime.now();
-    DateTime startDate = DateTime.now().subtract(const Duration(days: 7)); // Last 7 days
-
+  Future<void> requestAuthorization() async {
     try {
-      List<Map<String, dynamic>> data = await _mobilityPlugin.getMindfulnessData(
-        startDate: startDate,
-        endDate: endDate,
-      );
+      await _mobilityPlugin.requestAuthorization();
       if (!mounted) return;
 
       setState(() {
-        _mindfulnessData = data;
         _errorMessage = null;
       });
     } catch (e) {
       if (!mounted) return;
 
       setState(() {
-        _mindfulnessData.clear();
-        _errorMessage = 'Failed to fetch mindfulness data: $e';
+        _errorMessage = 'Failed to request authorization: $e';
       });
     }
   }
@@ -136,7 +112,7 @@ class _MyAppState extends State<MyApp> {
         unit = '%';
         break;
       case 'walkingSteadiness':
-        unit = ''; 
+        unit = '';
         break;
       default:
         unit = '';
@@ -183,10 +159,6 @@ class _MyAppState extends State<MyApp> {
                   onPressed: fetchMobilityData,
                   child: const Text('Fetch Mobility Data'),
                 ),
-                ElevatedButton(
-                  onPressed: fetchMindfulnessData,
-                  child: const Text('Fetch Mindfulness Data'),
-                ),
                 const SizedBox(height: 20),
                 Expanded(
                   child: _mobilityData.isNotEmpty
@@ -198,7 +170,8 @@ class _MyAppState extends State<MyApp> {
                               title: Text(_getDisplayName(key)),
                               children: dataPoints.map((dataPoint) {
                                 return ListTile(
-                                  title: Text(_dataPointToString(key, dataPoint)),
+                                  title:
+                                      Text(_dataPointToString(key, dataPoint)),
                                   subtitle: Text(
                                     'Start: ${DateTime.fromMillisecondsSinceEpoch((dataPoint['startDate'] * 1000).toInt())}\n'
                                     'End: ${DateTime.fromMillisecondsSinceEpoch((dataPoint['endDate'] * 1000).toInt())}',
@@ -211,26 +184,6 @@ class _MyAppState extends State<MyApp> {
                       : _errorMessage != null
                           ? Text(_errorMessage!)
                           : const Text('No mobility data available.'),
-                ),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: _mindfulnessData.isNotEmpty
-                      ? ListView.builder(
-                          itemCount: _mindfulnessData.length,
-                          itemBuilder: (context, index) {
-                            final dataPoint = _mindfulnessData[index];
-                            return ListTile(
-                              title: const Text('Mindful Session'),
-                              subtitle: Text(
-                                'Start: ${DateTime.fromMillisecondsSinceEpoch((dataPoint['startDate']).toInt())}\n'
-                                'End: ${DateTime.fromMillisecondsSinceEpoch((dataPoint['endDate']).toInt())}',
-                              ),
-                            );
-                          },
-                        )
-                      : _errorMessage != null
-                          ? Text(_errorMessage!)
-                          : const Text('No mindfulness data available.'),
                 ),
               ],
             ),
