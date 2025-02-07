@@ -149,5 +149,12 @@ In your app ensure you have included the necessary permissions in your `Info.pli
 <string>Need access to health data for mobility metrics.</string>
 ```
 
-| ![Screenshot 2024-12-09 at 4 41 13 PM](https://github.com/user-attachments/assets/6b2f068a-7fa4-4b4c-b5de-307e8ddea8c0) | ![Screenshot 2025-01-05 at 4 01 11 PM](https://github.com/user-attachments/assets/f04bfe7d-f127-411a-ae6e-c0b79be8a95f) |
-| :---------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------: |
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/636daf97-fb05-43e4-b22d-c629b9c02200" width="45%">
+  <img src="https://github.com/user-attachments/assets/929ad073-9aac-47d8-a161-b99c5aa0d30b" width="45%">
+</p>
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/cbe15bbb-e8b0-4aa3-a734-154124eda6b2" width="45%">
+  <img src="https://github.com/user-attachments/assets/b969294e-4b98-460a-b2c7-174060349fdc" width="45%">
+</p>
